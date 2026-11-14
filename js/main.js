@@ -160,13 +160,14 @@ function tick() {
 tick();
 setInterval(tick, 1000);
 
-/* ---------- Nhạc nền (bài YouTube, chỉ phát khi khách bấm) ---------- */
+/* ---------- Nhạc nền (file MP3, chỉ phát khi bấm) ---------- */
 const fab = $("#music-fab");
-const YOUTUBE_ID = "4Wxi4sVCeo0"; // Brooklyn Duo – A Thousand Years (wedding version)
+const music = new Audio("assets/audio/a-thousand-years.mp3"); // Brooklyn Duo – A Thousand Years (wedding version)
+music.loop = true;
+music.preload = "none";
 let musicOn = false;
-let player = null;
-let playerReady = false;
-let playerStarted = false;
+// Tải sẵn nhạc ngay khi trang rảnh, để bấm phong bì là có tiếng liền, không phải chờ tải ~4,8MB
+window.addEventListener("load", () => idle(() => { if (!musicOn) { music.preload = "auto"; music.load(); } }));
 
 function renderMusic(on) {
   musicOn = on;
@@ -175,47 +176,14 @@ function renderMusic(on) {
   $$("[data-play-music]").forEach((b) => { b.setAttribute("aria-pressed", String(on)); b.setAttribute("aria-label", on ? "Tắt nhạc" : "Bật nhạc"); });
 }
 
-// Trình phát YouTube ẩn (không hiện hình), tải sẵn khi trang rảnh để bấm phong bì là có tiếng liền
-function initPlayer() {
-  if (playerStarted) return;
-  playerStarted = true;
-  const host = document.createElement("div");
-  host.setAttribute("aria-hidden", "true");
-  host.style.cssText = "position:fixed;right:0;bottom:0;width:200px;height:200px;opacity:0;pointer-events:none;overflow:hidden";
-  const slot = document.createElement("div");
-  host.append(slot);
-  document.body.append(host);
-  window.onYouTubeIframeAPIReady = () => {
-    player = new YT.Player(slot, {
-      width: "200", height: "200", videoId: YOUTUBE_ID,
-      playerVars: { playsinline: 1, controls: 0, disablekb: 1, rel: 0, loop: 1, playlist: YOUTUBE_ID },
-      events: {
-        onReady: () => { playerReady = true; if (musicOn) player.playVideo(); },
-        onStateChange: (e) => {
-          if (e.data === YT.PlayerState.ENDED) player.playVideo(); // lặp lại bài
-          else if (e.data === YT.PlayerState.PLAYING && !musicOn) renderMusic(true);
-        },
-        onError: () => renderMusic(false), // video bị gỡ hoặc cấm nhúng: trả nút về trạng thái tắt
-      },
-    });
-  };
-  const script = document.createElement("script");
-  script.src = "https://www.youtube.com/iframe_api";
-  script.async = true;
-  document.head.append(script);
-}
-window.addEventListener("load", () => idle(initPlayer));
-
 function setMusic(on) {
   if (on === musicOn) return;
   renderMusic(on);
   if (on) {
-    initPlayer();
-    if (playerReady) player.playVideo();
-    // Quá 5 giây mà vẫn chưa phát (trình duyệt chặn hoặc mạng chậm) thì trả nút về trạng thái tắt
-    setTimeout(() => { if (musicOn && !(playerReady && player.getPlayerState() === YT.PlayerState.PLAYING)) renderMusic(false); }, 5000);
-  } else if (playerReady) {
-    player.pauseVideo();
+    // Trình duyệt từ chối phát (ví dụ chưa có thao tác của khách) thì trả nút về trạng thái tắt
+    music.play().catch(() => renderMusic(false));
+  } else {
+    music.pause();
   }
 }
 fab.addEventListener("click", () => setMusic(!musicOn));
