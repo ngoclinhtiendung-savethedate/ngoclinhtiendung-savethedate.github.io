@@ -196,7 +196,7 @@ const syncFab = () => { const hide = (ROUTES[location.hash] ?? "envelope") === "
 document.addEventListener("click", (e) => { if (e.target.closest("[data-open-gift]") && !giftDialog.open) giftDialog.showModal(); }); // nút nổi và hộp quà trong trang đều mở cùng một hộp thoại
 giftDialog.addEventListener("click", (e) => { if (e.target.closest("[data-close-gift]") || e.target === giftDialog) giftDialog.close(); });
 // Nút "Sao chép số tài khoản": ghi vào clipboard, đổi chữ nút 2 giây để báo đã chép
-giftDialog.addEventListener("click", async (e) => {
+document.addEventListener("click", async (e) => { // nút sao chép có cả trong hộp quà lẫn dưới mã QR ở trang chi tiết
   const btn = e.target.closest("[data-copy]");
   if (!btn) return;
   const text = btn.dataset.copy;
@@ -205,7 +205,7 @@ giftDialog.addEventListener("click", async (e) => {
   } catch {
     const ta = document.createElement("textarea");
     ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
-    giftDialog.appendChild(ta); ta.select();
+    (btn.closest("dialog") ?? document.body).appendChild(ta); ta.select(); // trong hộp thoại modal thì gắn vào chính hộp thoại
     try { document.execCommand("copy"); } finally { ta.remove(); }
   }
   const label = btn.textContent;
